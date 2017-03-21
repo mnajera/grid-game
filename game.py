@@ -1,5 +1,6 @@
 import pygame, math
 from player import Player
+from aiplayer import AIPlayer
 from grid import Grid
 
 
@@ -20,6 +21,8 @@ def main():
     grid = Grid('level.txt', grid_pixel_w, grid_pixel_h)
     player = Player(grid, grid_pixel_w, grid_pixel_h)
 
+    aiplayer = AIPlayer(grid, grid_pixel_w, grid_pixel_h)
+
     xscale = grid_pixel_w / grid.w
     yscale = grid_pixel_h / grid.h
 
@@ -28,6 +31,8 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
+
+        aiplayer.update()
 
         pressed = pygame.key.get_pressed()
 
@@ -71,6 +76,10 @@ def main():
         color = (0, 128, 255)
         pygame.draw.rect(screen, color, pygame.Rect(player.x + x_offset, player.y + y_offset, xscale, yscale))
         pygame.draw.rect(screen, color, pygame.Rect(player.x + x_offset, player.y + y_offset - (yscale * grid.h), xscale, yscale))
+
+        color = (128, 0, 0)
+        pygame.draw.rect(screen, color, pygame.Rect(aiplayer.x + x_offset, aiplayer.y + y_offset, xscale, yscale))
+        pygame.draw.rect(screen, color, pygame.Rect(aiplayer.x + x_offset, aiplayer.y + y_offset - (yscale * grid.h), xscale, yscale))
 
         # draw black rectangles on top and bottom of the grid to hide the player "warping"
         # beyond the edge of the screen
