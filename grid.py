@@ -1,10 +1,12 @@
-import pygame
+import math, pygame
 
 
 class Grid(object):
 
 	def __init__(self, filename, pixel_w, pixel_h):
 		self.load_file(filename)
+		self.pixel_w = pixel_w
+		self.pixel_h = pixel_h
 		self.xscale = pixel_w / self.w
 		self.yscale = pixel_h / self.w
 
@@ -31,4 +33,8 @@ class Grid(object):
 				for e in l:
 					self.data.append(e)
 
+	def pixel_to_grid(self, pixel_x, pixel_y):
+		return math.floor((pixel_x / self.pixel_w) * self.w), math.floor((pixel_y / self.pixel_h) * self.h)
 
+	def grid_to_pixel(self, grid_x, grid_y):
+		return grid_x / self.w * self.pixel_w, grid_y / self.h * self.pixel_h

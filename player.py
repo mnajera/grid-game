@@ -82,12 +82,5 @@ class Player(object):
                 p[1] += self.screen_height
             if p[1] >= self.screen_height:
                 p[1] -= self.screen_height
-        index_pairs = set()
-        for offset in offsets:
-            x_index = math.floor((offset[0] / self.screen_width) * self.grid.w)
-            y_index = math.floor((offset[1] / self.screen_height) * self.grid.h)
-            index_pairs.add((x_index, y_index))
-        for p in index_pairs:
-            if self.grid.value(p[0], p[1]) == 'x':
-                return True
-        return False
+        index_pairs = set([self.grid.pixel_to_grid(*e) for e in offsets])
+        return any([self.grid.value(*e) == 'x' for e in index_pairs])

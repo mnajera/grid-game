@@ -1,6 +1,7 @@
-import random
+import random, sys
 from player import Player
 from enum import Enum
+from copy import copy
 
 
 class Direction(Enum):
@@ -17,7 +18,8 @@ class AIPlayer(Player):
 		super(AIPlayer, self).__init__(grid, screen_width, screen_height)
 		self.directions = [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]
 		self.direction = random.choice(self.directions)
-		self.target_positions = [(200, 325), (100, 325), (100, 375), (25, 375)]
+		self.target_positions = []
+		self.set_goal_grid_pos(9, 9)
 
 	def update(self):
 
@@ -33,6 +35,7 @@ class AIPlayer(Player):
 		while self.x == target_position[0] and self.y == target_position[1]:
 			self.target_positions.pop()
 			if not self.target_positions:
+				self.set_goal_grid_pos(15, 15)
 				return
 			target_position = self.target_positions[-1]
 
@@ -72,3 +75,57 @@ class AIPlayer(Player):
 		x_distance = abs(self.x - next_x)
 		y_distance = abs(self.y - next_y)
 		return int(x_distance + y_distance)
+
+	def set_goal_grid_pos(self, gx, gy):
+		# locate our current grid position
+		pos = self.grid.pixel_to_grid(self.x, self.y)
+
+		# generate a list of all the paths that will take us to the goal,
+		# and determine the shortest path
+		path = sorted(self.gen_path_list(pos[0], pos[1], gx, gy), key=lambda l: len(l))[0]
+
+		# generate a list of pixel-space target positions to navigate to
+		self.target_positions = [self.grid.grid_to_pixel(*e) for e in path[::-1]]
+
+	def gen_path_list(self, start_gx, start_gy, goal_gx, goal_gy):
+		results = []
+		self.find_func(results, [], goal_gx, goal_gy, start_gx, start_gy)
+		return results
+
+	def find_func(self, results_list, working_list, goal_grid_x, goal_grid_y, current_grid_x, current_grid_y):
+
+		# base case: we are at the goal position
+		if (current_grid_x == goal_grid_x) and (current_grid_y == goal_grid_y):
+			results_list.append(working_list)
+			return
+
+		# if the current working list of moves is too long, cut off this
+		# search, as it's likely off in the weeds
+		# TODO: this limit should be empiricaly definied
+		if len(working_list) > 32:
+			return
+
+		# continue the search by branching off into each of the four directions
+		for d in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
+			new_pos = self.apply_direction(current_grid_x, current_grid_y, d)
+			if (new_pos[0] < 0) or (new_pos[0] >= self.grid.w):
+				continue
+			if (new_pos[1] < 0) or (new_pos[1] >= self.grid.h):
+				continue
+			if new_pos in working_list:
+				continue
+			if self.grid.value(*new_pos) != 'x':
+				new_working_list = copy(working_list)
+				new_working_list.append(new_pos)
+				self.find_func(results_list, new_working_list, goal_grid_x, goal_grid_y, *new_pos)
+
+	def apply_direction(self, x, y, d):
+		if d == Direction.UP:
+			return x, y - 1
+		if d == Direction.DOWN:
+			return x, y + 1
+		if d == Direction.LEFT:
+			return x - 1, y
+		if d == Direction.RIGHT:
+			return x + 1, y
+		return x, y
