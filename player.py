@@ -84,3 +84,6 @@ class Player(object):
                 p[1] -= self.screen_height
         index_pairs = set([self.grid.pixel_to_grid(*e) for e in offsets])
         return any([self.grid.value(*e) == 'x' for e in index_pairs])
+
+    def get_grid_pos(self):
+        return self.grid.pixel_to_grid(self.x, self.y)

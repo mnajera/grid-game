@@ -16,10 +16,7 @@ class AIPlayer(Player):
 
 	def __init__(self, grid, screen_width, screen_height):
 		super(AIPlayer, self).__init__(grid, screen_width, screen_height)
-		self.directions = [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]
-		self.direction = random.choice(self.directions)
 		self.target_positions = []
-		self.set_goal_grid_pos(9, 9)
 
 	def update(self):
 
@@ -32,16 +29,15 @@ class AIPlayer(Player):
 
 		# check to see if we're already at our current target, and remove that
 		# target from the list if we're there
-		while self.x == target_position[0] and self.y == target_position[1]:
+		while (self.x, self.y) == target_position:
 			self.target_positions.pop()
 			if not self.target_positions:
-				self.set_goal_grid_pos(15, 15)
 				return
 			target_position = self.target_positions[-1]
 
-		self.direction = self.direction_to(target_position[0], target_position[1])
+		self.direction = self.direction_to(target_position)
 
-		distance = self.distance_to(target_position[0], target_position[1])
+		distance = self.distance_to(target_position)
 
 		original_speed = self.speed
 		if distance < self.speed:
@@ -58,23 +54,21 @@ class AIPlayer(Player):
 
 		self.speed = original_speed
 
-	def direction_to(self, next_x, next_y):
+	def direction_to(self, target):
 		'''Based on the current position, what direction do I need
 		to travel in order to get to this next position?'''
-		if self.x < next_x:
+		if self.x < target[0]:
 			return Direction.RIGHT
-		if self.x > next_x:
+		if self.x > target[0]:
 			return Direction.LEFT
-		if self.y < next_y:
+		if self.y < target[1]:
 			return Direction.DOWN
-		if self.y > next_y:
+		if self.y > target[1]:
 			return Direction.UP
 		return Direction.NONE
 
-	def distance_to(self, next_x, next_y):
-		x_distance = abs(self.x - next_x)
-		y_distance = abs(self.y - next_y)
-		return int(x_distance + y_distance)
+	def distance_to(self, target):
+		return int(abs(self.x - target[0]) + abs(self.y - target[1]))
 
 	def set_goal_grid_pos(self, gx, gy):
 		# locate our current grid position

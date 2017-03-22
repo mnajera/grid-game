@@ -31,6 +31,8 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_g:
+                aiplayer.set_goal_grid_pos(*player.get_grid_pos())
 
         aiplayer.update()
 
