@@ -55,7 +55,7 @@ class AIPlayer(Player):
 		self.speed = original_speed
 
 	def direction_to(self, target):
-		'''Based on the current position, what direction do I need
+		'''Based on our current position, what direction do I need
 		to travel in order to get to this next position?'''
 		if self.x < target[0]:
 			return Direction.RIGHT
@@ -68,58 +68,85 @@ class AIPlayer(Player):
 		return Direction.NONE
 
 	def distance_to(self, target):
+		'''
+		Determine the Manhattan distance between ourselves and
+		the target position
+		''' 
 		return int(abs(self.x - target[0]) + abs(self.y - target[1]))
 
-	def set_goal_grid_pos(self, gx, gy):
+	def set_goal_grid_pos(self, goal_pos):
 		# locate our current grid position
 		pos = self.grid.pixel_to_grid(self.x, self.y)
 
 		# generate a list of all the paths that will take us to the goal,
 		# and determine the shortest path
-		path = sorted(self.gen_path_list(pos[0], pos[1], gx, gy), key=lambda l: len(l))[0]
+		path = sorted(self.generate_path_list(pos, goal_pos), key=lambda l: len(l))[0]
 
 		# generate a list of pixel-space target positions to navigate to
 		self.target_positions = [self.grid.grid_to_pixel(*e) for e in path[::-1]]
 
-	def gen_path_list(self, start_gx, start_gy, goal_gx, goal_gy):
+	def generate_path_list(self, start, end):
+		'''
+		Generate all of the possible paths that lead from the start
+		position to the end position
+		'''
 		results = []
-		self.find_func(results, [], goal_gx, goal_gy, start_gx, start_gy)
+		self.find_func(results, [], start, end)
 		return results
 
-	def find_func(self, results_list, working_list, goal_grid_x, goal_grid_y, current_grid_x, current_grid_y):
-
+	def find_func(self, results_list, working_list, current_pos, goal_pos):
+		'''
+		This helper function recursively generates all of the paths (in grid space)
+		that lead from current_pos to goal_pos.
+		'''
 		# base case: we are at the goal position
-		if (current_grid_x == goal_grid_x) and (current_grid_y == goal_grid_y):
+		if current_pos == goal_pos:
+			# add the current path to the result list
 			results_list.append(working_list)
 			return
 
 		# if the current working list of moves is too long, cut off this
 		# search, as it's likely off in the weeds
 		# TODO: this limit should be empiricaly definied
-		if len(working_list) > 32:
-			return
+		#if len(working_list) > 32:
+		#	return
 
 		# continue the search by branching off into each of the four directions
 		for d in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
-			new_pos = self.apply_direction(current_grid_x, current_grid_y, d)
+
+			# if we follow this direction, what will our new postion be?
+			new_pos = self.apply_direction(current_pos, d)
+
+			# make sure this new position isn't beyond the bounds of the grid
 			if (new_pos[0] < 0) or (new_pos[0] >= self.grid.w):
 				continue
 			if (new_pos[1] < 0) or (new_pos[1] >= self.grid.h):
 				continue
+
+			# we also want to make sure we haven't already visited this positon
+			# before
 			if new_pos in working_list:
 				continue
+
+			# finally, check to see if we've collided with a wall.  if not, we
+			# add this new position to our path and continue searching for the
+			# next move
 			if self.grid.value(*new_pos) != 'x':
 				new_working_list = copy(working_list)
 				new_working_list.append(new_pos)
-				self.find_func(results_list, new_working_list, goal_grid_x, goal_grid_y, *new_pos)
+				self.find_func(results_list, new_working_list, new_pos, goal_pos)
 
-	def apply_direction(self, x, y, d):
+	def apply_direction(self, pos, d):
+		'''
+		Given a position and a direction, determine what the new position
+		will be once the player moves in that direction.
+		'''
 		if d == Direction.UP:
-			return x, y - 1
+			return pos[0], pos[1] - 1
 		if d == Direction.DOWN:
-			return x, y + 1
+			return pos[0], pos[1] + 1
 		if d == Direction.LEFT:
-			return x - 1, y
+			return pos[0] - 1, pos[1]
 		if d == Direction.RIGHT:
-			return x + 1, y
+			return pos[0] + 1, pos[1]
 		return x, y
