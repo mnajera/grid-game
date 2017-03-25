@@ -1,4 +1,4 @@
-import pygame, math
+import pygame, math, sys
 from player import Player
 from aiplayer import AIPlayer
 from grid import Grid
@@ -17,11 +17,12 @@ def main():
     clock = pygame.time.Clock()
     done = False
 
-    grid_pixel_w, grid_pixel_h = 425, 425
-    grid = Grid('level.txt', grid_pixel_w, grid_pixel_h)
+    grid_pixel_w, grid_pixel_h = 460, 460
+    grid = Grid('level1.txt', grid_pixel_w, grid_pixel_h)
     player = Player(grid, grid_pixel_w, grid_pixel_h)
 
     aiplayer = AIPlayer(grid, grid_pixel_w, grid_pixel_h)
+    aiplayer.speed = 2
 
     xscale = grid_pixel_w / grid.w
     yscale = grid_pixel_h / grid.h

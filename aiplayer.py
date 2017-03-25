@@ -1,7 +1,7 @@
-import random, sys
+import random, time, sys
+from concurrent.futures import ThreadPoolExecutor
 from player import Player
 from enum import Enum
-from copy import copy
 
 
 class Direction(Enum):
@@ -17,8 +17,16 @@ class AIPlayer(Player):
 	def __init__(self, grid, screen_width, screen_height):
 		super(AIPlayer, self).__init__(grid, screen_width, screen_height)
 		self.target_positions = []
+		self.executor = ThreadPoolExecutor()
+		self.active_search = None
 
 	def update(self):
+
+		# if a search is currently underway, check to see if it has
+		# completed and retrieve the results
+		if self.active_search and self.active_search.done():
+			self.target_positions = self.active_search.result()
+			self.active_search = None
 
 		# if we don't have any targets to navigate to, we just stand still
 		if not self.target_positions:
@@ -35,14 +43,18 @@ class AIPlayer(Player):
 				return
 			target_position = self.target_positions[-1]
 
-		self.direction = self.direction_to(target_position)
-
+		# how close are we to the next position?
 		distance = self.distance_to(target_position)
 
+		# if we are going too fast; meaning that a movement towards
+		# the next position will take us past it, we will slow down
+		# so that we won't pass it by
 		original_speed = self.speed
 		if distance < self.speed:
 			self.speed = distance
 
+		# move in the correct direction to take us to the next position
+		self.direction = self.direction_to(target_position)
 		if self.direction == Direction.UP:
 			self.move_up()
 		if self.direction == Direction.DOWN:
@@ -52,6 +64,7 @@ class AIPlayer(Player):
 		if self.direction == Direction.RIGHT:
 			self.move_right()
 
+		# restore our speed, because we might have changed it
 		self.speed = original_speed
 
 	def direction_to(self, target):
@@ -74,7 +87,10 @@ class AIPlayer(Player):
 		''' 
 		return int(abs(self.x - target[0]) + abs(self.y - target[1]))
 
-	def set_goal_grid_pos(self, goal_pos):
+	def find_shortest_path_to(self, goal_pos):
+
+		start_time = time.time()
+
 		# locate our current grid position
 		pos = self.grid.pixel_to_grid(self.x, self.y)
 
@@ -82,8 +98,19 @@ class AIPlayer(Player):
 		# and determine the shortest path
 		path = sorted(self.generate_path_list(pos, goal_pos), key=lambda l: len(l))[0]
 
+		total_time = time.time() - start_time
+		print('took %2.2f seconds' % total_time)
+		sys.stdout.flush()
+
 		# generate a list of pixel-space target positions to navigate to
-		self.target_positions = [self.grid.grid_to_pixel(*e) for e in path[::-1]]
+		return [self.grid.grid_to_pixel(*e) for e in path[::-1]]
+
+	def set_goal_grid_pos(self, goal_pos):
+		# if we have an active search going, we don't want to start another one
+		if self.active_search:
+			return
+		# submit a search to be run on another thread
+		self.active_search = self.executor.submit(self.find_shortest_path_to, goal_pos)
 
 	def generate_path_list(self, start, end):
 		'''
@@ -91,10 +118,10 @@ class AIPlayer(Player):
 		position to the end position
 		'''
 		results = []
-		self.find_func(results, [], start, end)
+		self.find_func(results, [], set(), start, end)
 		return results
 
-	def find_func(self, results_list, working_list, current_pos, goal_pos):
+	def find_func(self, results_list, working_list, working_set, current_pos, goal_pos):
 		'''
 		This helper function recursively generates all of the paths (in grid space)
 		that lead from current_pos to goal_pos.
@@ -102,14 +129,8 @@ class AIPlayer(Player):
 		# base case: we are at the goal position
 		if current_pos == goal_pos:
 			# add the current path to the result list
-			results_list.append(working_list)
+			results_list.append([l for l in working_list])
 			return
-
-		# if the current working list of moves is too long, cut off this
-		# search, as it's likely off in the weeds
-		# TODO: this limit should be empiricaly definied
-		#if len(working_list) > 32:
-		#	return
 
 		# continue the search by branching off into each of the four directions
 		for d in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
@@ -125,16 +146,20 @@ class AIPlayer(Player):
 
 			# we also want to make sure we haven't already visited this positon
 			# before
-			if new_pos in working_list:
+			if new_pos in working_set:
 				continue
 
 			# finally, check to see if we've collided with a wall.  if not, we
 			# add this new position to our path and continue searching for the
 			# next move
 			if self.grid.value(*new_pos) != 'x':
-				new_working_list = copy(working_list)
-				new_working_list.append(new_pos)
-				self.find_func(results_list, new_working_list, new_pos, goal_pos)
+				working_list.append(new_pos)
+				working_set.add(new_pos)
+				self.find_func(results_list, working_list, working_set, new_pos, goal_pos)
+				# after we've considered all possible paths following this move, we
+				# can remove it from our current path
+				working_list.pop()
+				working_set.remove(new_pos)
 
 	def apply_direction(self, pos, d):
 		'''

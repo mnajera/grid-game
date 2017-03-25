@@ -8,10 +8,10 @@ class Grid(object):
 		self.pixel_w = pixel_w
 		self.pixel_h = pixel_h
 		self.xscale = pixel_w / self.w
-		self.yscale = pixel_h / self.w
+		self.yscale = pixel_h / self.h
 
 	def value(self, x, y):
-		index = x + (self.h * y)
+		index = x + (self.w * y)
 		return self.data[index]
 
 	def draw(self, screen, x_offset, y_offset):
