@@ -4,6 +4,8 @@ This is a simple game written in Python and PyGame intended to demonstrate a cou
 2. Pathfinding AI
 3. Running AI logic on a separate thread
 
+![Alt tag](example_screenshot.png?raw=true "screenshot")
+
 **Setup:**
 1. `pip install pygame`
 2. `python game.py`
